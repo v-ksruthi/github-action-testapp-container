@@ -1,0 +1,53 @@
+# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
+# More GitHub Actions for Azure: https://github.com/Azure/actions
+
+name: Build and deploy container app to Azure Web App - wapcontainerlinux-s256
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read #This is required for actions/checkout
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to container registry
+        uses: docker/login-action@v2
+        with:
+          registry: appexpressacr.azurecr.io/
+          username: ${{ secrets.AZUREAPPSERVICE_CONTAINERUSERNAME_9EF55510EB7C4B2580CB218B7C4C04B7 }}
+          password: ${{ secrets.AZUREAPPSERVICE_CONTAINERPASSWORD_CDC9A1D5F2054DFFA9082B9B770385CB }}
+
+      - name: Build and push container image to registry
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          push: true
+          tags: appexpressacr.azurecr.io/${{ secrets.AZUREAPPSERVICE_CONTAINERUSERNAME_9EF55510EB7C4B2580CB218B7C4C04B7 }}/hello-world:${{ github.sha }}
+          file: ./Dockerfile
+
+  deploy:
+    runs-on: ubuntu-latest
+    
+    needs: build
+    
+    steps:
+      
+      - name: Deploy to Azure Web App
+        id: deploy-to-webapp
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: 'wapcontainerlinux-s256'
+          slot-name: 'Production'
+          images: 'appexpressacr.azurecr.io/${{ secrets.AZUREAPPSERVICE_CONTAINERUSERNAME_9EF55510EB7C4B2580CB218B7C4C04B7 }}/hello-world:${{ github.sha }}'
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_D3C3F9CBE87D4B1E90A6F023F20E2A95 }}
